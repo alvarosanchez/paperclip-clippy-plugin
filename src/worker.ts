@@ -1,5 +1,5 @@
 import { definePlugin, runWorker } from '@paperclipai/plugin-sdk';
-import { DEFAULT_CLIPPY_SETTINGS, normalizeClippySettings } from './ui/settings.ts';
+import { DEFAULT_CLIPPY_SETTINGS, normalizeClippySettings } from './settings.ts';
 
 const SETTINGS_SCOPE = {
   scopeKind: 'instance' as const,

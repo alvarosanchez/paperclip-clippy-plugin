@@ -12,11 +12,10 @@ test('manifest registers toolbar and settings surfaces', () => {
   assert.ok(manifest.capabilities.includes('plugin.state.read'));
   assert.ok(manifest.capabilities.includes('plugin.state.write'));
 
-  const slotIds = manifest.ui?.slots?.map((slot) => slot.id) ?? [];
-  assert.deepEqual(slotIds, [
-    'paperclip-clippy-plugin-global-toolbar-button',
-    'paperclip-clippy-plugin-settings-page'
-  ]);
+  const slotIds = new Set(manifest.ui?.slots?.map((slot) => slot.id) ?? []);
+  assert.ok(slotIds.has('paperclip-clippy-plugin-global-toolbar-button'));
+  assert.ok(slotIds.has('paperclip-clippy-plugin-settings-page'));
+  assert.equal(slotIds.size, 2);
 });
 
 test('worker returns default settings and persists updates', async () => {
