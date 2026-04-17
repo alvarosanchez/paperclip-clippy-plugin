@@ -82,6 +82,9 @@ function flattenText(element: Element): string {
   for (const excluded of Array.from(sanitized.querySelectorAll(EXCLUDE_SELECTORS))) {
     excluded.remove();
   }
+  if (sanitized.matches(EXCLUDE_SELECTORS)) {
+    return "";
+  }
   const doc = element.ownerDocument;
   const defaultView = doc?.defaultView;
   const nodeFilter = defaultView?.NodeFilter;

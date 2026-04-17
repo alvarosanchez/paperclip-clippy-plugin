@@ -32,20 +32,7 @@ const CANDIDATE_SELECTORS = [
   "[data-snackbar]"
 ].join(",");
 const TOAST_CONTAINER_HINTS = ["toast", "notification", "sonner", "snackbar"];
-const CONTAINER_TAGS = new Set(["div", "section", "article", "aside"]);
-
-const CHILD_HINTS = [
-  "title",
-  "body",
-  "content",
-  "message",
-  "label",
-  "close",
-  "dismiss",
-  "action",
-  "button",
-  "icon"
-];
+const FRAGMENT_HINTS = ["title", "body", "content", "close", "dismiss", "action", "button", "icon"];
 
 export function scoreToastCandidate(element: Element): number {
   return collectToastCandidateScore(element).score;
@@ -92,13 +79,12 @@ export function collectToastCandidates(
 
   for (const searchRoot of searchRoots) {
     for (const element of searchRoot.querySelectorAll(CANDIDATE_SELECTORS)) {
-      considerCandidate(element, candidates, minScore);
+      const canonical = canonicalizeToastContainer(element, minScore);
+      if (!canonical || isWeakFragment(canonical, minScore)) {
+        continue;
+      }
+      considerCandidate(canonical, candidates, minScore);
     }
-  }
-
-  const shadowHost = getShadowHost(root);
-  if (shadowHost) {
-    considerCandidate(shadowHost, candidates, minScore);
   }
 
   const filtered = Array.from(candidates.values()).filter((candidate) => {
@@ -140,6 +126,18 @@ function collectSearchRoots(root: ParentNode): ParentNode[] {
   return roots;
 }
 
+function canonicalizeToastContainer(element: Element, minScore: number): Element | null {
+  let current: Element | null = element;
+  let best: Element | null = null;
+  while (current) {
+    if (looksLikeToastContainer(current, minScore)) {
+      best = current;
+    }
+    current = getComposedParent(current);
+  }
+  return best;
+}
+
 function hasCandidateAncestor(
   element: Element,
   candidates: Map<Element, ToastCandidate>
@@ -163,27 +161,7 @@ function hasCandidateAncestor(
 }
 
 function isLikelyChildPiece(element: Element): boolean {
-  const sources = collectHintSources(element);
-  const hasToastHint = sources.some((source) =>
-    TOAST_CONTAINER_HINTS.some((hint) => source.includes(hint))
-  );
-  if (!hasToastHint) {
-    return false;
-  }
-
-  const hasChildHint = sources.some((source) =>
-    CHILD_HINTS.some((hint) => source.includes(hint))
-  );
-  if (!hasChildHint) {
-    return false;
-  }
-
-  const isContainerTag = CONTAINER_TAGS.has(element.tagName.toLowerCase());
-  if (isContainerTag) {
-    return false;
-  }
-
-  return true;
+  return false;
 }
 
 function isParentNode(root: unknown): root is ParentNode {
@@ -212,13 +190,46 @@ function considerCandidate(
   }
 }
 
-function getShadowHost(root: ParentNode): Element | null {
+function isShadowRoot(root: unknown): root is ShadowRoot {
+  return Boolean(root && typeof (root as ShadowRoot).host !== "undefined");
+}
+
+function looksLikeToastContainer(element: Element, minScore: number): boolean {
+  if (element.matches(CANDIDATE_SELECTORS)) {
+    return true;
+  }
+  return collectToastCandidateScore(element).score >= minScore;
+}
+
+function getComposedParent(element: Element): Element | null {
+  if (element.parentElement) {
+    return element.parentElement;
+  }
+  const root = element.getRootNode();
   if (isShadowRoot(root)) {
     return root.host;
   }
   return null;
 }
 
-function isShadowRoot(root: unknown): root is ShadowRoot {
-  return Boolean(root && typeof (root as ShadowRoot).host !== "undefined");
+function isWeakFragment(element: Element, minScore: number): boolean {
+  if (collectToastCandidateScore(element).score >= minScore + 2) {
+    return false;
+  }
+  if (element.hasAttribute("role") || element.hasAttribute("aria-live")) {
+    return false;
+  }
+  for (const attr of Array.from(element.attributes)) {
+    if (attr.name.startsWith("data-")) {
+      return false;
+    }
+  }
+  const sources = collectHintSources(element);
+  const hasToastHint = sources.some((source) =>
+    TOAST_CONTAINER_HINTS.some((hint) => source.includes(hint))
+  );
+  if (!hasToastHint) {
+    return true;
+  }
+  return sources.some((source) => FRAGMENT_HINTS.some((hint) => source.includes(hint)));
 }

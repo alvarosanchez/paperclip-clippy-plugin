@@ -142,4 +142,23 @@ describe("toast detection", () => {
       ["snackbar"]
     );
   });
+
+  it("accepts real toast roots on non-div tags", () => {
+    const dom = new JSDOM(`<li id="toast-item" class="toast">Item</li>`);
+    const document = dom.window.document;
+    const candidates = collectToastCandidates(document);
+
+    assert.deepEqual(
+      candidates.map((candidate) => candidate.element.id),
+      ["toast-item"]
+    );
+  });
+
+  it("does not return child fragments without strong toast signals", () => {
+    const dom = new JSDOM(`<div id="fragment" class="toast-title">Title</div>`);
+    const document = dom.window.document;
+    const candidates = collectToastCandidates(document);
+
+    assert.deepEqual(candidates.map((candidate) => candidate.element.id), []);
+  });
 });
