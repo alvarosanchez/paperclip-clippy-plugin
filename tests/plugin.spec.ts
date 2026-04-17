@@ -47,6 +47,9 @@ test('worker returns default settings and persists updates', async () => {
 });
 
 test('ui exports slot components', () => {
-  assert.equal(typeof uiExports.ClippyGlobalToolbarButton, 'function');
-  assert.equal(typeof uiExports.ClippySettingsPage, 'function');
+  const slotExports = manifest.ui?.slots?.map((slot) => slot.exportName) ?? [];
+  assert.ok(slotExports.length > 0);
+  for (const exportName of slotExports) {
+    assert.equal(typeof (uiExports as Record<string, unknown>)[exportName], 'function');
+  }
 });
