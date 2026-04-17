@@ -23,9 +23,9 @@ describe("toast detection", () => {
     const ids = new Set(candidates.map((candidate) => candidate.element.id));
 
     assert.ok(ids.has("role-alert"), "role alert should be included");
-    assert.ok(ids.has("aria-live"), "aria-live should be included");
     assert.ok(ids.has("class-toast"), "toast class should be included");
     assert.ok(ids.has("class-notification"), "notification class should be included");
+    assert.ok(!ids.has("aria-live"), "generic aria-live should be excluded");
 
     for (const candidate of candidates) {
       assert.ok(
@@ -101,6 +101,22 @@ describe("toast detection", () => {
     );
   });
 
+  it("finds shadow-root toasts from document scans", () => {
+    const dom = new JSDOM(`<div id="host"></div>`);
+    const document = dom.window.document;
+    const host = document.getElementById("host");
+
+    assert.ok(host);
+    const shadowRoot = host.attachShadow({ mode: "open" });
+    shadowRoot.innerHTML = `<div id="shadow-toast" class="toast">Shadow</div>`;
+
+    const candidates = collectToastCandidates(document);
+    assert.deepEqual(
+      candidates.map((candidate) => candidate.element.id),
+      ["shadow-toast"]
+    );
+  });
+
   it("keeps real toast roots that include child-hint words", () => {
     const dom = new JSDOM(
       `
@@ -156,6 +172,14 @@ describe("toast detection", () => {
 
   it("does not return child fragments without strong toast signals", () => {
     const dom = new JSDOM(`<div id="fragment" class="toast-title">Title</div>`);
+    const document = dom.window.document;
+    const candidates = collectToastCandidates(document);
+
+    assert.deepEqual(candidates.map((candidate) => candidate.element.id), []);
+  });
+
+  it("does not return generic aria-live regions without toast signals", () => {
+    const dom = new JSDOM(`<div id="live" aria-live="polite">Status</div>`);
     const document = dom.window.document;
     const candidates = collectToastCandidates(document);
 

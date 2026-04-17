@@ -21,7 +21,6 @@ const HINT_SCORES: Array<{ hint: string; score: number }> = [
 const CANDIDATE_SELECTORS = [
   '[role="status"]',
   '[role="alert"]',
-  "[aria-live]",
   '[class*="toast" i]',
   '[class*="notification" i]',
   '[class*="sonner" i]',
@@ -53,12 +52,13 @@ export function collectToastCandidateScore(element: Element): {
 
   const liveRegion = element.closest("[aria-live]");
   const ariaLive = liveRegion?.getAttribute("aria-live")?.toLowerCase();
-  if (liveRegion && ariaLive !== "off") {
-    score += 2;
-    reasons.push("aria-live");
-  }
-
   const hintSources = collectHintSources(element);
+  if (liveRegion && ariaLive !== "off") {
+    if (hintSources.some((source) => TOAST_CONTAINER_HINTS.some((hint) => source.includes(hint)))) {
+      score += 1;
+      reasons.push("aria-live");
+    }
+  }
   for (const { hint, score: hintScore } of HINT_SCORES) {
     if (hintSources.some((source) => source.includes(hint))) {
       score += hintScore;
@@ -117,6 +117,15 @@ function collectHintSources(element: Element): string[] {
 
 function collectSearchRoots(root: ParentNode): ParentNode[] {
   const roots: ParentNode[] = [root];
+  if (isDocument(root)) {
+    for (const node of Array.from(root.querySelectorAll("*"))) {
+      const shadowRoot = (node as Element & { shadowRoot?: ShadowRoot | null }).shadowRoot;
+      if (shadowRoot && isParentNode(shadowRoot)) {
+        roots.push(shadowRoot);
+      }
+    }
+    return roots;
+  }
   if (isElement(root)) {
     const shadowRoot = root.shadowRoot;
     if (shadowRoot && isParentNode(shadowRoot)) {
@@ -160,12 +169,12 @@ function hasCandidateAncestor(
   return false;
 }
 
-function isLikelyChildPiece(element: Element): boolean {
-  return false;
-}
-
 function isParentNode(root: unknown): root is ParentNode {
   return Boolean(root) && typeof (root as ParentNode).querySelectorAll === "function";
+}
+
+function isDocument(root: ParentNode): root is Document {
+  return (root as Document).nodeType === 9;
 }
 
 function isElement(root: ParentNode): root is Element {
@@ -177,7 +186,7 @@ function considerCandidate(
   candidates: Map<Element, ToastCandidate>,
   minScore: number
 ): void {
-  if (isHandledToast(element) || isLikelyChildPiece(element)) {
+  if (isHandledToast(element)) {
     return;
   }
   const { score, reasons } = collectToastCandidateScore(element);
