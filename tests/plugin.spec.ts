@@ -3,7 +3,7 @@ import test from 'node:test';
 import { createTestHarness } from '@paperclipai/plugin-sdk/testing';
 
 import manifest from '../src/manifest.ts';
-import plugin from '../src/plugin.ts';
+import plugin, { SETTINGS_ACTION_KEY, SETTINGS_DATA_KEY } from '../src/plugin.ts';
 
 test('manifest registers toolbar and settings surfaces', () => {
   assert.equal(manifest.id, 'paperclip-clippy-plugin');
@@ -22,18 +22,25 @@ test('worker returns default settings and persists updates', async () => {
   const harness = createTestHarness({ manifest });
   await plugin.definition.setup(harness.ctx);
 
-  const initial = await harness.getData<{ enabled: boolean; interceptionMode: string }>(
-    'clippy-settings',
+  const initial = await harness.getData<{ enabled: boolean; interceptionMode: string; showDebugPanel: boolean }>(
+    SETTINGS_DATA_KEY,
     {}
   );
   assert.equal(initial.enabled, false);
   assert.equal(initial.interceptionMode, 'aggressive');
+  assert.equal(initial.showDebugPanel, false);
 
-  await harness.performAction('save-clippy-settings', {
-    enabled: false,
-    interceptionMode: 'aggressive'
+  await harness.performAction(SETTINGS_ACTION_KEY, {
+    enabled: 'no',
+    interceptionMode: 'invalid',
+    showDebugPanel: true
   });
 
-  const updated = await harness.getData<{ enabled: boolean }>('clippy-settings', {});
+  const updated = await harness.getData<{ enabled: boolean; interceptionMode: string; showDebugPanel: boolean }>(
+    SETTINGS_DATA_KEY,
+    {}
+  );
   assert.equal(updated.enabled, false);
+  assert.equal(updated.interceptionMode, 'aggressive');
+  assert.equal(updated.showDebugPanel, true);
 });

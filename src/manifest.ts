@@ -15,7 +15,7 @@ const manifest: PaperclipPluginManifestV1 = {
   displayName: 'Clippy Toast Hijacker',
   description: 'Aggressively hides host toasts and replaces them with a Clippy-style overlay.',
   author: 'Alvaro Sanchez-Mariscal',
-  categories: ['ui', 'fun'],
+  categories: ['ui'],
   capabilities: [
     'ui.action.register',
     'ui.page.register',
