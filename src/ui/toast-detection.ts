@@ -15,8 +15,7 @@ const HINT_SCORES: Array<{ hint: string; score: number }> = [
   { hint: "toast", score: 2 },
   { hint: "notification", score: 2 },
   { hint: "sonner", score: 2 },
-  { hint: "snackbar", score: 1 },
-  { hint: "message", score: 1 }
+  { hint: "snackbar", score: 1 }
 ];
 
 const CANDIDATE_SELECTORS = [
@@ -26,9 +25,11 @@ const CANDIDATE_SELECTORS = [
   '[class*="toast" i]',
   '[class*="notification" i]',
   '[class*="sonner" i]',
+  '[class*="snackbar" i]',
   "[data-toast]",
   "[data-notification]",
-  "[data-sonner]"
+  "[data-sonner]",
+  "[data-snackbar]"
 ].join(",");
 const TOAST_CONTAINER_HINTS = ["toast", "notification", "sonner", "snackbar"];
 const CONTAINER_TAGS = new Set(["div", "section", "article", "aside"]);
@@ -91,18 +92,13 @@ export function collectToastCandidates(
 
   for (const searchRoot of searchRoots) {
     for (const element of searchRoot.querySelectorAll(CANDIDATE_SELECTORS)) {
-      if (isHandledToast(element) || isLikelyChildPiece(element)) {
-        continue;
-      }
-      const { score, reasons } = collectToastCandidateScore(element);
-      if (score < minScore) {
-        continue;
-      }
-      const existing = candidates.get(element);
-      if (!existing || score > existing.score) {
-        candidates.set(element, { element, score, reasons });
-      }
+      considerCandidate(element, candidates, minScore);
     }
+  }
+
+  const shadowHost = getShadowHost(root);
+  if (shadowHost) {
+    considerCandidate(shadowHost, candidates, minScore);
   }
 
   const filtered = Array.from(candidates.values()).filter((candidate) => {
@@ -135,23 +131,33 @@ function collectHintSources(element: Element): string[] {
 
 function collectSearchRoots(root: ParentNode): ParentNode[] {
   const roots: ParentNode[] = [root];
-  for (const node of Array.from(root.querySelectorAll("*"))) {
-    const shadowRoot = (node as Element & { shadowRoot?: ShadowRoot | null }).shadowRoot;
+  if (isElement(root)) {
+    const shadowRoot = root.shadowRoot;
     if (shadowRoot && isParentNode(shadowRoot)) {
       roots.push(shadowRoot);
     }
   }
-
   return roots;
 }
 
-function hasCandidateAncestor(element: Element, candidates: Map<Element, ToastCandidate>): boolean {
+function hasCandidateAncestor(
+  element: Element,
+  candidates: Map<Element, ToastCandidate>
+): boolean {
   let current: Element | null = element.parentElement;
   while (current) {
     if (candidates.has(current)) {
       return true;
     }
     current = current.parentElement;
+  }
+  let rootNode: Document | ShadowRoot | null = element.getRootNode();
+  while (rootNode && isShadowRoot(rootNode)) {
+    const host = rootNode.host;
+    if (candidates.has(host)) {
+      return true;
+    }
+    rootNode = host.getRootNode();
   }
   return false;
 }
@@ -182,4 +188,37 @@ function isLikelyChildPiece(element: Element): boolean {
 
 function isParentNode(root: unknown): root is ParentNode {
   return Boolean(root) && typeof (root as ParentNode).querySelectorAll === "function";
+}
+
+function isElement(root: ParentNode): root is Element {
+  return (root as Element).nodeType === 1;
+}
+
+function considerCandidate(
+  element: Element,
+  candidates: Map<Element, ToastCandidate>,
+  minScore: number
+): void {
+  if (isHandledToast(element) || isLikelyChildPiece(element)) {
+    return;
+  }
+  const { score, reasons } = collectToastCandidateScore(element);
+  if (score < minScore) {
+    return;
+  }
+  const existing = candidates.get(element);
+  if (!existing || score > existing.score) {
+    candidates.set(element, { element, score, reasons });
+  }
+}
+
+function getShadowHost(root: ParentNode): Element | null {
+  if (isShadowRoot(root)) {
+    return root.host;
+  }
+  return null;
+}
+
+function isShadowRoot(root: unknown): root is ShadowRoot {
+  return Boolean(root && typeof (root as ShadowRoot).host !== "undefined");
 }

@@ -115,4 +115,31 @@ describe("toast detection", () => {
       ["message-toast"]
     );
   });
+
+  it("dedupes when shadow-root candidates have a matching host container", () => {
+    const dom = new JSDOM(`<div id="host" class="toast"></div>`);
+    const document = dom.window.document;
+    const host = document.getElementById("host");
+
+    assert.ok(host);
+    const shadowRoot = host.attachShadow({ mode: "open" });
+    shadowRoot.innerHTML = `<div id="shadow-title" class="toast-title">Title</div>`;
+
+    const candidates = collectToastCandidates(shadowRoot);
+    assert.deepEqual(
+      candidates.map((candidate) => candidate.element.id),
+      ["host"]
+    );
+  });
+
+  it("matches snackbar class hints when scoring expects them", () => {
+    const dom = new JSDOM(`<div id="snackbar" class="snackbar">Snack</div>`);
+    const document = dom.window.document;
+    const candidates = collectToastCandidates(document);
+
+    assert.deepEqual(
+      candidates.map((candidate) => candidate.element.id),
+      ["snackbar"]
+    );
+  });
 });
