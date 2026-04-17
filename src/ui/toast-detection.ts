@@ -228,11 +228,6 @@ function isWeakFragment(element: Element, minScore: number): boolean {
   if (element.hasAttribute("role") || element.hasAttribute("aria-live")) {
     return false;
   }
-  for (const attr of Array.from(element.attributes)) {
-    if (attr.name.startsWith("data-")) {
-      return false;
-    }
-  }
   const sources = collectHintSources(element);
   const hasToastHint = sources.some((source) =>
     TOAST_CONTAINER_HINTS.some((hint) => source.includes(hint))

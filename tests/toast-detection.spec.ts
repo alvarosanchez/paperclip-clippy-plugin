@@ -85,6 +85,23 @@ describe("toast detection", () => {
     );
   });
 
+  it("ignores data-testid on nested toast fragments", () => {
+    const dom = new JSDOM(
+      `
+        <div id="outer" class="toast">
+          <div id="title" class="toast-title" data-testid="toast-title">Title</div>
+        </div>
+      `
+    );
+    const document = dom.window.document;
+    const candidates = collectToastCandidates(document);
+
+    assert.deepEqual(
+      candidates.map((candidate) => candidate.element.id),
+      ["outer"]
+    );
+  });
+
   it("supports ShadowRoot scoped querying", () => {
     const dom = new JSDOM(`<div id="host"></div>`);
     const document = dom.window.document;
