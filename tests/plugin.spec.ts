@@ -26,7 +26,7 @@ test('worker returns default settings and persists updates', async () => {
     'clippy-settings',
     {}
   );
-  assert.equal(initial.enabled, true);
+  assert.equal(initial.enabled, false);
   assert.equal(initial.interceptionMode, 'aggressive');
 
   await harness.performAction('save-clippy-settings', {

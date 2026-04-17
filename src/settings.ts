@@ -7,7 +7,7 @@ export interface ClippySettings {
 }
 
 export const DEFAULT_CLIPPY_SETTINGS: ClippySettings = {
-  enabled: true,
+  enabled: false,
   interceptionMode: 'aggressive',
   showDebugPanel: false
 };
