@@ -158,9 +158,9 @@ function hasCandidateAncestor(
     }
     current = current.parentElement;
   }
-  let rootNode: Document | ShadowRoot | null = element.getRootNode();
+  let rootNode: Node | null = element.getRootNode();
   while (rootNode && isShadowRoot(rootNode)) {
-    const host = rootNode.host;
+    const host: Element = rootNode.host;
     if (candidates.has(host)) {
       return true;
     }
