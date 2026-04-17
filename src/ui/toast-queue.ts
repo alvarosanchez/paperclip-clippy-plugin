@@ -34,12 +34,15 @@ export class ToastQueue<T> {
   dequeue(): ToastQueueEntry<T> | null {
     const entry = this.current;
     this.current = this.queue[this.headIndex] ?? null;
-    if (this.current) {
-      this.headIndex += 1;
-      if (this.headIndex > 32 && this.headIndex * 2 >= this.queue.length) {
-        this.queue = this.queue.slice(this.headIndex);
-        this.headIndex = 0;
-      }
+    if (!this.current) {
+      this.queue = [];
+      this.headIndex = 0;
+      return entry;
+    }
+    this.headIndex += 1;
+    if (this.headIndex > 32 && this.headIndex * 2 >= this.queue.length) {
+      this.queue = this.queue.slice(this.headIndex);
+      this.headIndex = 0;
     }
     return entry;
   }

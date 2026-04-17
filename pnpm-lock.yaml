@@ -18,6 +18,9 @@ importers:
         specifier: ^19.2.5
         version: 19.2.5(react@19.2.5)
     devDependencies:
+      '@types/jsdom':
+        specifier: 28.0.1
+        version: 28.0.1
       '@types/node':
         specifier: 24.12.2
         version: 24.12.2
@@ -394,11 +397,17 @@ packages:
   '@paperclipai/shared@2026.416.0':
     resolution: {integrity: sha512-ORG3f8X1Z4m/K4rbIlWP16UqPWlGSTiFtCAQajDddclY+b/Ubfn0M6Xh54+zkjy1TGVePnLGuif8EKDkX5Sb4g==}
 
+  '@types/jsdom@28.0.1':
+    resolution: {integrity: sha512-GJq2QE4TAZ5ajSoCasn5DOFm8u1mI3tIFvM5tIq3W5U/RTB6gsHwc6Yhpl91X9VSDOUVblgXmG+2+sSvFQrdlw==}
+
   '@types/node@24.12.2':
     resolution: {integrity: sha512-A1sre26ke7HDIuY/M23nd9gfB+nrmhtYyMINbjI1zHJxYteKR6qSMX56FsmjMcDb3SMcjJg5BiRRgOCC/yBD0g==}
 
   '@types/react@19.2.14':
     resolution: {integrity: sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==}
+
+  '@types/tough-cookie@4.0.5':
+    resolution: {integrity: sha512-/Ad8+nIOV7Rl++6f1BdKxFSMgmoqEoYbHRpPcx3JEfv8VRsQe9Z4mCXeJBzxs7mbHY/XOZZuXlRNfhpVPbs6ZA==}
 
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
@@ -548,6 +557,9 @@ packages:
 
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
+
+  undici-types@7.25.0:
+    resolution: {integrity: sha512-AXNgS1Byr27fTI+2bsPEkV9CxkT8H6xNyRI68b3TatlZo3RkzlqQBLL+w7SmGPVpokjHbcuNVQUWE7FRTg+LRA==}
 
   w3c-xmlserializer@5.0.0:
     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
@@ -789,6 +801,13 @@ snapshots:
     dependencies:
       zod: 3.25.76
 
+  '@types/jsdom@28.0.1':
+    dependencies:
+      '@types/node': 24.12.2
+      '@types/tough-cookie': 4.0.5
+      parse5: 7.3.0
+      undici-types: 7.25.0
+
   '@types/node@24.12.2':
     dependencies:
       undici-types: 7.16.0
@@ -796,6 +815,8 @@ snapshots:
   '@types/react@19.2.14':
     dependencies:
       csstype: 3.2.3
+
+  '@types/tough-cookie@4.0.5': {}
 
   agent-base@7.1.4: {}
 
@@ -992,6 +1013,8 @@ snapshots:
   typescript@6.0.2: {}
 
   undici-types@7.16.0: {}
+
+  undici-types@7.25.0: {}
 
   w3c-xmlserializer@5.0.0:
     dependencies:

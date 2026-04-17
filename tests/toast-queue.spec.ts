@@ -61,9 +61,9 @@ describe("toast suppression", () => {
     const element = document.getElementById("toast");
 
     assert.ok(element);
-    element.style.display = "block";
-    element.style.visibility = "visible";
-    element.style.pointerEvents = "auto";
+    element.style.setProperty("display", "block", "important");
+    element.style.setProperty("visibility", "visible");
+    element.style.setProperty("pointer-events", "auto", "important");
     suppressToastNode(element, { token: "release-test", now: () => 100, releaseAfterMs: 5 });
 
     element.remove();
@@ -72,8 +72,10 @@ describe("toast suppression", () => {
     assert.equal(element.hasAttribute(HANDLED_TOAST_ATTR), false);
     assert.equal(element.hasAttribute(SUPPRESSED_TOAST_ATTR), false);
     assert.equal(element.style.display, "block");
+    assert.equal(element.style.getPropertyPriority("display"), "important");
     assert.equal(element.style.visibility, "visible");
     assert.equal(element.style.pointerEvents, "auto");
+    assert.equal(element.style.getPropertyPriority("pointer-events"), "important");
     assert.equal(element.getAttribute("aria-hidden"), "false");
   });
 });

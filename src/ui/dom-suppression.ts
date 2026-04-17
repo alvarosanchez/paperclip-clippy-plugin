@@ -4,9 +4,13 @@ export const SUPPRESSED_TOAST_ATTR = "data-clippy-toast-suppressed";
 export const SUPPRESSED_TOAST_TOKEN_ATTR = "data-clippy-toast-suppressed-token";
 export const SUPPRESSED_TOAST_AT_ATTR = "data-clippy-toast-suppressed-at";
 const PREV_DISPLAY_ATTR = "data-clippy-toast-prev-display";
+const PREV_DISPLAY_PRIORITY_ATTR = "data-clippy-toast-prev-display-priority";
 const PREV_VISIBILITY_ATTR = "data-clippy-toast-prev-visibility";
+const PREV_VISIBILITY_PRIORITY_ATTR = "data-clippy-toast-prev-visibility-priority";
 const PREV_POINTER_EVENTS_ATTR = "data-clippy-toast-prev-pointer-events";
+const PREV_POINTER_EVENTS_PRIORITY_ATTR = "data-clippy-toast-prev-pointer-events-priority";
 const PREV_ARIA_HIDDEN_ATTR = "data-clippy-toast-prev-aria-hidden";
+const PREV_HANDLED_ATTR = "data-clippy-toast-prev-handled";
 const UNSET_VALUE = "__clippy_unset__";
 
 const DEFAULT_RELEASE_AFTER_MS = 15000;
@@ -89,6 +93,11 @@ function hideElement(element: Element): void {
 }
 
 function persistOriginalState(element: Element): void {
+  storeAttrIfMissing(
+    element,
+    PREV_HANDLED_ATTR,
+    element.getAttribute(HANDLED_TOAST_ATTR) ?? UNSET_VALUE
+  );
   if ("style" in element) {
     const style = (element as HTMLElement).style;
     storeAttrIfMissing(
@@ -98,13 +107,28 @@ function persistOriginalState(element: Element): void {
     );
     storeAttrIfMissing(
       element,
+      PREV_DISPLAY_PRIORITY_ATTR,
+      normalizeStylePriority(style.getPropertyPriority("display"))
+    );
+    storeAttrIfMissing(
+      element,
       PREV_VISIBILITY_ATTR,
       normalizeStyleValue(style.getPropertyValue("visibility"))
     );
     storeAttrIfMissing(
       element,
+      PREV_VISIBILITY_PRIORITY_ATTR,
+      normalizeStylePriority(style.getPropertyPriority("visibility"))
+    );
+    storeAttrIfMissing(
+      element,
       PREV_POINTER_EVENTS_ATTR,
       normalizeStyleValue(style.getPropertyValue("pointer-events"))
+    );
+    storeAttrIfMissing(
+      element,
+      PREV_POINTER_EVENTS_PRIORITY_ATTR,
+      normalizeStylePriority(style.getPropertyPriority("pointer-events"))
     );
   }
 
@@ -115,12 +139,23 @@ function persistOriginalState(element: Element): void {
 function restoreOriginalState(element: Element): void {
   if ("style" in element) {
     const style = (element as HTMLElement).style;
-    restoreStyleProperty(style, "display", element.getAttribute(PREV_DISPLAY_ATTR));
-    restoreStyleProperty(style, "visibility", element.getAttribute(PREV_VISIBILITY_ATTR));
+    restoreStyleProperty(
+      style,
+      "display",
+      element.getAttribute(PREV_DISPLAY_ATTR),
+      element.getAttribute(PREV_DISPLAY_PRIORITY_ATTR)
+    );
+    restoreStyleProperty(
+      style,
+      "visibility",
+      element.getAttribute(PREV_VISIBILITY_ATTR),
+      element.getAttribute(PREV_VISIBILITY_PRIORITY_ATTR)
+    );
     restoreStyleProperty(
       style,
       "pointer-events",
-      element.getAttribute(PREV_POINTER_EVENTS_ATTR)
+      element.getAttribute(PREV_POINTER_EVENTS_ATTR),
+      element.getAttribute(PREV_POINTER_EVENTS_PRIORITY_ATTR)
     );
   }
 
@@ -133,16 +168,30 @@ function restoreOriginalState(element: Element): void {
     }
   }
 
+  const prevHandled = element.getAttribute(PREV_HANDLED_ATTR);
+  if (prevHandled !== null) {
+    if (prevHandled === UNSET_VALUE) {
+      element.removeAttribute(HANDLED_TOAST_ATTR);
+    } else {
+      element.setAttribute(HANDLED_TOAST_ATTR, prevHandled);
+    }
+  }
+
   element.removeAttribute(PREV_DISPLAY_ATTR);
+  element.removeAttribute(PREV_DISPLAY_PRIORITY_ATTR);
   element.removeAttribute(PREV_VISIBILITY_ATTR);
+  element.removeAttribute(PREV_VISIBILITY_PRIORITY_ATTR);
   element.removeAttribute(PREV_POINTER_EVENTS_ATTR);
+  element.removeAttribute(PREV_POINTER_EVENTS_PRIORITY_ATTR);
   element.removeAttribute(PREV_ARIA_HIDDEN_ATTR);
+  element.removeAttribute(PREV_HANDLED_ATTR);
 }
 
 function restoreStyleProperty(
   style: CSSStyleDeclaration,
   name: string,
-  value: string | null
+  value: string | null,
+  priority: string | null
 ): void {
   if (value === null) {
     return;
@@ -150,11 +199,15 @@ function restoreStyleProperty(
   if (value === UNSET_VALUE) {
     style.removeProperty(name);
   } else {
-    style.setProperty(name, value);
+    style.setProperty(name, value, priority === UNSET_VALUE || !priority ? "" : priority);
   }
 }
 
 function normalizeStyleValue(value: string): string {
+  return value === "" ? UNSET_VALUE : value;
+}
+
+function normalizeStylePriority(value: string): string {
   return value === "" ? UNSET_VALUE : value;
 }
 
