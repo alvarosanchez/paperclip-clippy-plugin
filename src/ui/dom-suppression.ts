@@ -33,9 +33,7 @@ export function suppressToastNode(
   options?: SuppressionOptions
 ): SuppressionResult {
   const now = options?.now ?? Date.now;
-  const existingToken =
-    element.getAttribute(SUPPRESSED_TOAST_TOKEN_ATTR) ??
-    element.getAttribute(HANDLED_TOAST_ATTR);
+  const existingToken = element.getAttribute(SUPPRESSED_TOAST_TOKEN_ATTR);
   const alreadySuppressed = element.getAttribute(SUPPRESSED_TOAST_ATTR) === "true";
   let token = options?.token ?? existingToken ?? createSuppressionToken(now);
   if (alreadySuppressed && existingToken) {
@@ -70,7 +68,13 @@ export function suppressToastNodes(
 }
 
 export function clearToastSuppression(element: Element): void {
-  element.removeAttribute(HANDLED_TOAST_ATTR);
+  if (
+    !element.hasAttribute(SUPPRESSED_TOAST_ATTR)
+    && !element.hasAttribute(PREV_HANDLED_ATTR)
+    && !element.hasAttribute(PREV_ARIA_HIDDEN_ATTR)
+  ) {
+    return;
+  }
   element.removeAttribute(SUPPRESSED_TOAST_ATTR);
   element.removeAttribute(SUPPRESSED_TOAST_TOKEN_ATTR);
   element.removeAttribute(SUPPRESSED_TOAST_AT_ATTR);
@@ -226,10 +230,14 @@ function scheduleReleaseOnDisconnect(element: Element, releaseAfterMs: number): 
     releaseTimers.delete(element);
     return;
   }
-  const timer = setTimeout(() => {
+  const timer = setTimeout(function releaseWhenDisconnected() {
     if (!element.isConnected) {
+      releaseTimers.delete(element);
       clearToastSuppression(element);
+      return;
     }
+    const nextTimer = setTimeout(releaseWhenDisconnected, releaseAfterMs);
+    releaseTimers.set(element, nextTimer);
   }, releaseAfterMs);
   releaseTimers.set(element, timer);
 }

@@ -7,6 +7,7 @@ import {
   SUPPRESSED_TOAST_ATTR,
   SUPPRESSED_TOAST_AT_ATTR,
   SUPPRESSED_TOAST_TOKEN_ATTR,
+  clearToastSuppression,
   suppressToastNode
 } from "../src/ui/dom-suppression.ts";
 import { ToastQueue } from "../src/ui/toast-queue.ts";
@@ -77,6 +78,60 @@ describe("toast suppression", () => {
     assert.equal(element.style.pointerEvents, "auto");
     assert.equal(element.style.getPropertyPriority("pointer-events"), "important");
     assert.equal(element.getAttribute("aria-hidden"), "false");
+  });
+
+  it("releases suppression after a delayed disconnect", async () => {
+    const dom = new JSDOM(`<div id="toast"></div>`);
+    const document = dom.window.document;
+    const element = document.getElementById("toast");
+
+    assert.ok(element);
+    suppressToastNode(element, { token: "delayed-release", now: () => 100, releaseAfterMs: 5 });
+
+    await sleep(10);
+    assert.equal(element.hasAttribute(HANDLED_TOAST_ATTR), true);
+
+    element.remove();
+    await waitForCondition(() => !element.hasAttribute(HANDLED_TOAST_ATTR));
+
+    assert.equal(element.hasAttribute(SUPPRESSED_TOAST_ATTR), false);
+  });
+
+  it("preserves pre-existing handled markers", () => {
+    const dom = new JSDOM(`<div id="toast"></div>`);
+    const document = dom.window.document;
+    const element = document.getElementById("toast");
+
+    assert.ok(element);
+    element.setAttribute(HANDLED_TOAST_ATTR, "true");
+
+    const originalRandom = Math.random;
+    Math.random = () => 0.5;
+    try {
+      suppressToastNode(element, { now: () => 500, releaseAfterMs: 0 });
+    } finally {
+      Math.random = originalRandom;
+    }
+
+    assert.equal(element.getAttribute(SUPPRESSED_TOAST_TOKEN_ATTR), "clippy-500-8");
+    assert.equal(element.getAttribute(HANDLED_TOAST_ATTR), "clippy-500-8");
+    clearToastSuppression(element);
+    assert.equal(element.getAttribute(HANDLED_TOAST_ATTR), "true");
+  });
+
+  it("does not clear handled markers when suppression state is unowned", () => {
+    const dom = new JSDOM(`<div id="toast"></div>`);
+    const document = dom.window.document;
+    const element = document.getElementById("toast");
+
+    assert.ok(element);
+    element.setAttribute(HANDLED_TOAST_ATTR, "external");
+
+    element.removeAttribute(SUPPRESSED_TOAST_ATTR);
+    element.removeAttribute(SUPPRESSED_TOAST_TOKEN_ATTR);
+    element.removeAttribute(SUPPRESSED_TOAST_AT_ATTR);
+
+    assert.equal(element.getAttribute(HANDLED_TOAST_ATTR), "external");
   });
 
   it("cancels pending release timers when releaseAfterMs is non-positive", async () => {
