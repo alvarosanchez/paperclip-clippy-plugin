@@ -18,11 +18,22 @@ export function normalizeClippySettings(input: unknown): ClippySettings {
       ? (input as Record<string, unknown>)
       : {};
   const interceptionMode =
-    record.interceptionMode === 'invasive' ? 'invasive' : 'aggressive';
+    record.interceptionMode === 'invasive'
+      || record.interceptionMode === 'aggressive'
+      ? record.interceptionMode
+      : DEFAULT_CLIPPY_SETTINGS.interceptionMode;
+  const enabled =
+    typeof record.enabled === 'boolean'
+      ? record.enabled
+      : DEFAULT_CLIPPY_SETTINGS.enabled;
+  const showDebugPanel =
+    typeof record.showDebugPanel === 'boolean'
+      ? record.showDebugPanel
+      : DEFAULT_CLIPPY_SETTINGS.showDebugPanel;
 
   return {
-    enabled: record.enabled === false ? false : true,
+    enabled,
     interceptionMode,
-    showDebugPanel: record.showDebugPanel === true
+    showDebugPanel
   };
 }

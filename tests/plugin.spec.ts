@@ -3,7 +3,7 @@ import test from 'node:test';
 import { createTestHarness } from '@paperclipai/plugin-sdk/testing';
 
 import manifest from '../src/manifest.ts';
-import plugin from '../src/worker.ts';
+import plugin from '../src/plugin.ts';
 
 test('manifest registers toolbar and settings surfaces', () => {
   assert.equal(manifest.id, 'paperclip-clippy-plugin');
