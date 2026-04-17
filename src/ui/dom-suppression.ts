@@ -3,6 +3,11 @@ import { HANDLED_TOAST_ATTR } from "./toast-detection.ts";
 export const SUPPRESSED_TOAST_ATTR = "data-clippy-toast-suppressed";
 export const SUPPRESSED_TOAST_TOKEN_ATTR = "data-clippy-toast-suppressed-token";
 export const SUPPRESSED_TOAST_AT_ATTR = "data-clippy-toast-suppressed-at";
+const PREV_DISPLAY_ATTR = "data-clippy-toast-prev-display";
+const PREV_VISIBILITY_ATTR = "data-clippy-toast-prev-visibility";
+const PREV_POINTER_EVENTS_ATTR = "data-clippy-toast-prev-pointer-events";
+const PREV_ARIA_HIDDEN_ATTR = "data-clippy-toast-prev-aria-hidden";
+const UNSET_VALUE = "__clippy_unset__";
 
 const DEFAULT_RELEASE_AFTER_MS = 15000;
 const releaseTimers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
@@ -24,14 +29,24 @@ export function suppressToastNode(
   options?: SuppressionOptions
 ): SuppressionResult {
   const now = options?.now ?? Date.now;
-  const token = options?.token ?? createSuppressionToken(now);
+  const existingToken =
+    element.getAttribute(SUPPRESSED_TOAST_TOKEN_ATTR) ??
+    element.getAttribute(HANDLED_TOAST_ATTR);
+  const alreadySuppressed = element.getAttribute(SUPPRESSED_TOAST_ATTR) === "true";
+  let token = options?.token ?? existingToken ?? createSuppressionToken(now);
+  if (alreadySuppressed && existingToken) {
+    token = existingToken;
+  }
   const alreadyHandled = element.hasAttribute(HANDLED_TOAST_ATTR);
 
-  element.setAttribute(HANDLED_TOAST_ATTR, token);
-  element.setAttribute(SUPPRESSED_TOAST_ATTR, "true");
-  element.setAttribute(SUPPRESSED_TOAST_TOKEN_ATTR, token);
-  element.setAttribute(SUPPRESSED_TOAST_AT_ATTR, String(now()));
-  hideElement(element);
+  if (!(alreadySuppressed && existingToken && existingToken === token)) {
+    persistOriginalState(element);
+    element.setAttribute(HANDLED_TOAST_ATTR, token);
+    element.setAttribute(SUPPRESSED_TOAST_ATTR, "true");
+    element.setAttribute(SUPPRESSED_TOAST_TOKEN_ATTR, token);
+    element.setAttribute(SUPPRESSED_TOAST_AT_ATTR, String(now()));
+    hideElement(element);
+  }
 
   const releaseAfterMs = options?.releaseAfterMs ?? DEFAULT_RELEASE_AFTER_MS;
   scheduleReleaseOnDisconnect(element, releaseAfterMs);
@@ -55,12 +70,7 @@ export function clearToastSuppression(element: Element): void {
   element.removeAttribute(SUPPRESSED_TOAST_ATTR);
   element.removeAttribute(SUPPRESSED_TOAST_TOKEN_ATTR);
   element.removeAttribute(SUPPRESSED_TOAST_AT_ATTR);
-  if ("style" in element) {
-    const style = (element as HTMLElement).style;
-    style.removeProperty("display");
-    style.removeProperty("visibility");
-    style.removeProperty("pointer-events");
-  }
+  restoreOriginalState(element);
 }
 
 export function createSuppressionToken(now: () => number = Date.now): string {
@@ -75,6 +85,82 @@ function hideElement(element: Element): void {
     style.setProperty("pointer-events", "none", "important");
   } else {
     element.setAttribute("aria-hidden", "true");
+  }
+}
+
+function persistOriginalState(element: Element): void {
+  if ("style" in element) {
+    const style = (element as HTMLElement).style;
+    storeAttrIfMissing(
+      element,
+      PREV_DISPLAY_ATTR,
+      normalizeStyleValue(style.getPropertyValue("display"))
+    );
+    storeAttrIfMissing(
+      element,
+      PREV_VISIBILITY_ATTR,
+      normalizeStyleValue(style.getPropertyValue("visibility"))
+    );
+    storeAttrIfMissing(
+      element,
+      PREV_POINTER_EVENTS_ATTR,
+      normalizeStyleValue(style.getPropertyValue("pointer-events"))
+    );
+  }
+
+  const ariaHidden = element.getAttribute("aria-hidden");
+  storeAttrIfMissing(element, PREV_ARIA_HIDDEN_ATTR, ariaHidden ?? UNSET_VALUE);
+}
+
+function restoreOriginalState(element: Element): void {
+  if ("style" in element) {
+    const style = (element as HTMLElement).style;
+    restoreStyleProperty(style, "display", element.getAttribute(PREV_DISPLAY_ATTR));
+    restoreStyleProperty(style, "visibility", element.getAttribute(PREV_VISIBILITY_ATTR));
+    restoreStyleProperty(
+      style,
+      "pointer-events",
+      element.getAttribute(PREV_POINTER_EVENTS_ATTR)
+    );
+  }
+
+  const prevAriaHidden = element.getAttribute(PREV_ARIA_HIDDEN_ATTR);
+  if (prevAriaHidden !== null) {
+    if (prevAriaHidden === UNSET_VALUE) {
+      element.removeAttribute("aria-hidden");
+    } else {
+      element.setAttribute("aria-hidden", prevAriaHidden);
+    }
+  }
+
+  element.removeAttribute(PREV_DISPLAY_ATTR);
+  element.removeAttribute(PREV_VISIBILITY_ATTR);
+  element.removeAttribute(PREV_POINTER_EVENTS_ATTR);
+  element.removeAttribute(PREV_ARIA_HIDDEN_ATTR);
+}
+
+function restoreStyleProperty(
+  style: CSSStyleDeclaration,
+  name: string,
+  value: string | null
+): void {
+  if (value === null) {
+    return;
+  }
+  if (value === UNSET_VALUE) {
+    style.removeProperty(name);
+  } else {
+    style.setProperty(name, value);
+  }
+}
+
+function normalizeStyleValue(value: string): string {
+  return value === "" ? UNSET_VALUE : value;
+}
+
+function storeAttrIfMissing(element: Element, name: string, value: string): void {
+  if (!element.hasAttribute(name)) {
+    element.setAttribute(name, value);
   }
 }
 

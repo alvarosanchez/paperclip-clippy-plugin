@@ -14,6 +14,7 @@ export class ToastQueue<T> {
   private readonly idFactory: () => string;
   private current: ToastQueueEntry<T> | null = null;
   private queue: ToastQueueEntry<T>[] = [];
+  private headIndex = 0;
 
   constructor(options?: ToastQueueOptions) {
     this.now = options?.now ?? Date.now;
@@ -32,7 +33,14 @@ export class ToastQueue<T> {
 
   dequeue(): ToastQueueEntry<T> | null {
     const entry = this.current;
-    this.current = this.queue.shift() ?? null;
+    this.current = this.queue[this.headIndex] ?? null;
+    if (this.current) {
+      this.headIndex += 1;
+      if (this.headIndex > 32 && this.headIndex * 2 >= this.queue.length) {
+        this.queue = this.queue.slice(this.headIndex);
+        this.headIndex = 0;
+      }
+    }
     return entry;
   }
 
@@ -43,10 +51,11 @@ export class ToastQueue<T> {
   clear(): void {
     this.current = null;
     this.queue = [];
+    this.headIndex = 0;
   }
 
   get size(): number {
-    return this.queue.length + (this.current ? 1 : 0);
+    return this.queue.length - this.headIndex + (this.current ? 1 : 0);
   }
 
   get active(): ToastQueueEntry<T> | null {
@@ -54,7 +63,7 @@ export class ToastQueue<T> {
   }
 
   get pending(): ToastQueueEntry<T>[] {
-    return [...this.queue];
+    return this.queue.slice(this.headIndex);
   }
 }
 
