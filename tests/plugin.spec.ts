@@ -4,6 +4,7 @@ import { createTestHarness } from '@paperclipai/plugin-sdk/testing';
 
 import manifest from '../src/manifest.ts';
 import plugin, { SETTINGS_ACTION_KEY, SETTINGS_DATA_KEY } from '../src/plugin.ts';
+import * as uiExports from '../src/ui/index.tsx';
 
 test('manifest registers toolbar and settings surfaces', () => {
   assert.equal(manifest.id, 'paperclip-clippy-plugin');
@@ -43,4 +44,9 @@ test('worker returns default settings and persists updates', async () => {
   assert.equal(updated.enabled, false);
   assert.equal(updated.interceptionMode, 'aggressive');
   assert.equal(updated.showDebugPanel, true);
+});
+
+test('ui exports slot components', () => {
+  assert.equal(typeof uiExports.ClippyGlobalToolbarButton, 'function');
+  assert.equal(typeof uiExports.ClippySettingsPage, 'function');
 });
