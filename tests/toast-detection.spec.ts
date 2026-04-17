@@ -100,4 +100,19 @@ describe("toast detection", () => {
       ["shadow-toast"]
     );
   });
+
+  it("keeps real toast roots that include child-hint words", () => {
+    const dom = new JSDOM(
+      `
+        <div id="message-toast" class="toast-message">Hello</div>
+      `
+    );
+    const document = dom.window.document;
+    const candidates = collectToastCandidates(document);
+
+    assert.deepEqual(
+      candidates.map((candidate) => candidate.element.id),
+      ["message-toast"]
+    );
+  });
 });

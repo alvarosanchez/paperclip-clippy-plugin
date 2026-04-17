@@ -31,6 +31,7 @@ const CANDIDATE_SELECTORS = [
   "[data-sonner]"
 ].join(",");
 const TOAST_CONTAINER_HINTS = ["toast", "notification", "sonner", "snackbar"];
+const CONTAINER_TAGS = new Set(["div", "section", "article", "aside"]);
 
 const CHILD_HINTS = [
   "title",
@@ -163,7 +164,20 @@ function isLikelyChildPiece(element: Element): boolean {
   if (!hasToastHint) {
     return false;
   }
-  return sources.some((source) => CHILD_HINTS.some((hint) => source.includes(hint)));
+
+  const hasChildHint = sources.some((source) =>
+    CHILD_HINTS.some((hint) => source.includes(hint))
+  );
+  if (!hasChildHint) {
+    return false;
+  }
+
+  const isContainerTag = CONTAINER_TAGS.has(element.tagName.toLowerCase());
+  if (isContainerTag) {
+    return false;
+  }
+
+  return true;
 }
 
 function isParentNode(root: unknown): root is ParentNode {
