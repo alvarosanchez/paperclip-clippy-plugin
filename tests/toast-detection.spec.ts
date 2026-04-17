@@ -46,4 +46,58 @@ describe("toast detection", () => {
     const candidates = collectToastCandidates(document);
     assert.equal(candidates.length, 0);
   });
+
+  it("respects subtree scoping", () => {
+    const dom = new JSDOM(
+      `
+        <section id="scope">
+          <div id="inside" class="toast">Inside</div>
+        </section>
+        <div id="outside" class="toast">Outside</div>
+      `
+    );
+    const document = dom.window.document;
+    const scope = document.getElementById("scope");
+
+    assert.ok(scope);
+    const candidates = collectToastCandidates(scope);
+    assert.deepEqual(
+      candidates.map((candidate) => candidate.element.id),
+      ["inside"]
+    );
+  });
+
+  it("avoids duplicate nested toast candidates", () => {
+    const dom = new JSDOM(
+      `
+        <div id="outer" class="toast">
+          <div id="title" class="toast-title">Title</div>
+          <button id="close" class="toast-close">Close</button>
+        </div>
+      `
+    );
+    const document = dom.window.document;
+    const candidates = collectToastCandidates(document);
+
+    assert.deepEqual(
+      candidates.map((candidate) => candidate.element.id),
+      ["outer"]
+    );
+  });
+
+  it("supports ShadowRoot scoped querying", () => {
+    const dom = new JSDOM(`<div id="host"></div>`);
+    const document = dom.window.document;
+    const host = document.getElementById("host");
+
+    assert.ok(host);
+    const shadowRoot = host.attachShadow({ mode: "open" });
+    shadowRoot.innerHTML = `<div id="shadow-toast" class="toast">Shadow</div>`;
+
+    const candidates = collectToastCandidates(shadowRoot);
+    assert.deepEqual(
+      candidates.map((candidate) => candidate.element.id),
+      ["shadow-toast"]
+    );
+  });
 });

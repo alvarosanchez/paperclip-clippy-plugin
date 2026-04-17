@@ -30,6 +30,20 @@ const CANDIDATE_SELECTORS = [
   "[data-notification]",
   "[data-sonner]"
 ].join(",");
+const TOAST_CONTAINER_HINTS = ["toast", "notification", "sonner", "snackbar"];
+
+const CHILD_HINTS = [
+  "title",
+  "body",
+  "content",
+  "message",
+  "label",
+  "close",
+  "dismiss",
+  "action",
+  "button",
+  "icon"
+];
 
 export function scoreToastCandidate(element: Element): number {
   return collectToastCandidateScore(element).score;
@@ -67,25 +81,34 @@ export function collectToastCandidateScore(element: Element): {
 }
 
 export function collectToastCandidates(
-  root: Document | Element,
+  root: ParentNode,
   options?: { minScore?: number }
 ): ToastCandidate[] {
-  const document = getDocument(root);
   const candidates = new Map<Element, ToastCandidate>();
   const minScore = options?.minScore ?? 1;
+  const searchRoots = collectSearchRoots(root);
 
-  for (const element of document.querySelectorAll(CANDIDATE_SELECTORS)) {
-    if (isHandledToast(element)) {
-      continue;
+  for (const searchRoot of searchRoots) {
+    for (const element of searchRoot.querySelectorAll(CANDIDATE_SELECTORS)) {
+      if (isHandledToast(element) || isLikelyChildPiece(element)) {
+        continue;
+      }
+      const { score, reasons } = collectToastCandidateScore(element);
+      if (score < minScore) {
+        continue;
+      }
+      const existing = candidates.get(element);
+      if (!existing || score > existing.score) {
+        candidates.set(element, { element, score, reasons });
+      }
     }
-    const { score, reasons } = collectToastCandidateScore(element);
-    if (score < minScore) {
-      continue;
-    }
-    candidates.set(element, { element, score, reasons });
   }
 
-  return Array.from(candidates.values()).sort((a, b) => b.score - a.score);
+  const filtered = Array.from(candidates.values()).filter((candidate) => {
+    return !hasCandidateAncestor(candidate.element, candidates);
+  });
+
+  return filtered.sort((a, b) => b.score - a.score);
 }
 
 export function isHandledToast(element: Element): boolean {
@@ -109,9 +132,40 @@ function collectHintSources(element: Element): string[] {
   return sources;
 }
 
-function getDocument(root: Document | Element): Document {
-  if ("nodeType" in root && root.nodeType === 9) {
-    return root as Document;
+function collectSearchRoots(root: ParentNode): ParentNode[] {
+  const roots: ParentNode[] = [root];
+  for (const node of Array.from(root.querySelectorAll("*"))) {
+    const shadowRoot = (node as Element & { shadowRoot?: ShadowRoot | null }).shadowRoot;
+    if (shadowRoot && isParentNode(shadowRoot)) {
+      roots.push(shadowRoot);
+    }
   }
-  return root.ownerDocument ?? (root as Element).ownerDocument;
+
+  return roots;
+}
+
+function hasCandidateAncestor(element: Element, candidates: Map<Element, ToastCandidate>): boolean {
+  let current: Element | null = element.parentElement;
+  while (current) {
+    if (candidates.has(current)) {
+      return true;
+    }
+    current = current.parentElement;
+  }
+  return false;
+}
+
+function isLikelyChildPiece(element: Element): boolean {
+  const sources = collectHintSources(element);
+  const hasToastHint = sources.some((source) =>
+    TOAST_CONTAINER_HINTS.some((hint) => source.includes(hint))
+  );
+  if (!hasToastHint) {
+    return false;
+  }
+  return sources.some((source) => CHILD_HINTS.some((hint) => source.includes(hint)));
+}
+
+function isParentNode(root: unknown): root is ParentNode {
+  return Boolean(root) && typeof (root as ParentNode).querySelectorAll === "function";
 }

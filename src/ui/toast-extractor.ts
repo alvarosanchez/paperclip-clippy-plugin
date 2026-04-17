@@ -4,8 +4,31 @@ export type ToastContent = {
   source: "structured" | "flattened";
 };
 
-const TITLE_SELECTORS = ["h1", "h2", "h3", "h4", "h5", "h6", "[data-title]", "[data-toast-title]"];
+const TITLE_SELECTORS = [
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "[data-title]",
+  "[data-toast-title]"
+];
 const BODY_SELECTORS = ["p", "[data-body]", "[data-toast-body]"];
+const EXCLUDE_SELECTORS = [
+  "[aria-hidden=\"true\"]",
+  "[hidden]",
+  "[data-hidden=\"true\"]",
+  "[data-dismiss]",
+  "[data-close]",
+  "[data-toast-close]",
+  "[data-toast-dismiss]",
+  "[data-action=\"close\"]",
+  "button",
+  "[role=\"button\"]",
+  "svg",
+  "path"
+].join(",");
 
 export function extractToastContent(element: Element): ToastContent {
   const structured = extractStructuredContent(element);
@@ -55,14 +78,18 @@ function findFirstText(element: Element, selectors: string[]): string | null {
 }
 
 function flattenText(element: Element): string {
+  const sanitized = element.cloneNode(true) as Element;
+  for (const excluded of Array.from(sanitized.querySelectorAll(EXCLUDE_SELECTORS))) {
+    excluded.remove();
+  }
   const doc = element.ownerDocument;
   const defaultView = doc?.defaultView;
   const nodeFilter = defaultView?.NodeFilter;
   if (!doc || !nodeFilter) {
-    return normalizeWhitespace(element.textContent ?? "");
+    return normalizeWhitespace(sanitized.textContent ?? "");
   }
 
-  const walker = doc.createTreeWalker(element, nodeFilter.SHOW_TEXT);
+  const walker = doc.createTreeWalker(sanitized, nodeFilter.SHOW_TEXT);
   const parts: string[] = [];
   let node = walker.nextNode();
   while (node) {
