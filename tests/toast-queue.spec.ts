@@ -78,6 +78,22 @@ describe("toast suppression", () => {
     assert.equal(element.style.getPropertyPriority("pointer-events"), "important");
     assert.equal(element.getAttribute("aria-hidden"), "false");
   });
+
+  it("cancels pending release timers when releaseAfterMs is non-positive", async () => {
+    const dom = new JSDOM(`<div id="toast"></div>`);
+    const document = dom.window.document;
+    const element = document.getElementById("toast");
+
+    assert.ok(element);
+    suppressToastNode(element, { token: "release-test", now: () => 100, releaseAfterMs: 25 });
+    suppressToastNode(element, { token: "release-test", now: () => 110, releaseAfterMs: 0 });
+
+    element.remove();
+    await sleep(40);
+
+    assert.equal(element.hasAttribute(HANDLED_TOAST_ATTR), true);
+    assert.equal(element.hasAttribute(SUPPRESSED_TOAST_ATTR), true);
+  });
 });
 
 async function waitForCondition(condition: () => boolean): Promise<void> {
@@ -89,4 +105,8 @@ async function waitForCondition(condition: () => boolean): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
   assert.ok(condition(), "condition did not resolve before timeout");
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
 }

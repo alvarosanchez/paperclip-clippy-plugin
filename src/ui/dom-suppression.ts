@@ -218,12 +218,13 @@ function storeAttrIfMissing(element: Element, name: string, value: string): void
 }
 
 function scheduleReleaseOnDisconnect(element: Element, releaseAfterMs: number): void {
-  if (releaseAfterMs <= 0) {
-    return;
-  }
   const existing = releaseTimers.get(element);
   if (existing) {
     clearTimeout(existing);
+  }
+  if (releaseAfterMs <= 0) {
+    releaseTimers.delete(element);
+    return;
   }
   const timer = setTimeout(() => {
     if (!element.isConnected) {
