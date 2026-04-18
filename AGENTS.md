@@ -16,4 +16,7 @@ Run the smallest relevant scope first:
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm verify:manual
 ```
+
+`pnpm verify:manual` now follows the nearby Paperclip plugin convention: it builds the plugin, launches a disposable local Paperclip instance, installs this repo as a local plugin, seeds a dummy company to skip onboarding, and opens the Plugins settings index for manual inspection. Use `PAPERCLIP_E2E_OPEN_BROWSER=false` if you need to run it without auto-opening a browser.

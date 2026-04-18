@@ -7,6 +7,7 @@ import {
   SUPPRESSED_TOAST_ATTR,
   SUPPRESSED_TOAST_AT_ATTR,
   SUPPRESSED_TOAST_TOKEN_ATTR,
+  clearSuppressedToastNodes,
   clearToastSuppression,
   suppressToastNode
 } from "../src/ui/dom-suppression.ts";
@@ -97,25 +98,23 @@ describe("toast suppression", () => {
     assert.equal(element.hasAttribute(SUPPRESSED_TOAST_ATTR), false);
   });
 
-  it("preserves pre-existing handled markers", () => {
+  it("leaves already handled nodes untouched", () => {
     const dom = new JSDOM(`<div id="toast"></div>`);
     const document = dom.window.document;
     const element = document.getElementById("toast");
 
     assert.ok(element);
+    element.style.display = "block";
+    element.style.visibility = "visible";
     element.setAttribute(HANDLED_TOAST_ATTR, "true");
 
-    const originalRandom = Math.random;
-    Math.random = () => 0.5;
-    try {
-      suppressToastNode(element, { now: () => 500, releaseAfterMs: 0 });
-    } finally {
-      Math.random = originalRandom;
-    }
+    const result = suppressToastNode(element, { now: () => 500, releaseAfterMs: 0 });
 
-    assert.equal(element.getAttribute(SUPPRESSED_TOAST_TOKEN_ATTR), "clippy-500-8");
-    assert.equal(element.getAttribute(HANDLED_TOAST_ATTR), "clippy-500-8");
-    clearToastSuppression(element);
+    assert.equal(result.alreadyHandled, true);
+    assert.equal(element.getAttribute(SUPPRESSED_TOAST_TOKEN_ATTR), null);
+    assert.equal(element.getAttribute(SUPPRESSED_TOAST_ATTR), null);
+    assert.equal(element.style.display, "block");
+    assert.equal(element.style.visibility, "visible");
     assert.equal(element.getAttribute(HANDLED_TOAST_ATTR), "true");
   });
 
@@ -148,6 +147,26 @@ describe("toast suppression", () => {
 
     assert.equal(element.hasAttribute(HANDLED_TOAST_ATTR), true);
     assert.equal(element.hasAttribute(SUPPRESSED_TOAST_ATTR), true);
+  });
+
+  it("clears all suppressed nodes from a root", () => {
+    const dom = new JSDOM(`<div><div id="toast-a"></div><div id="toast-b"></div></div>`);
+    const document = dom.window.document;
+    const first = document.getElementById("toast-a");
+    const second = document.getElementById("toast-b");
+
+    assert.ok(first);
+    assert.ok(second);
+    suppressToastNode(first, { token: "first", now: () => 100, releaseAfterMs: 0 });
+    suppressToastNode(second, { token: "second", now: () => 100, releaseAfterMs: 0 });
+
+    const cleared = clearSuppressedToastNodes(document.body);
+
+    assert.equal(cleared, 2);
+    assert.equal(first.hasAttribute(SUPPRESSED_TOAST_ATTR), false);
+    assert.equal(second.hasAttribute(SUPPRESSED_TOAST_ATTR), false);
+    assert.equal(first.style.display, "");
+    assert.equal(second.style.display, "");
   });
 });
 

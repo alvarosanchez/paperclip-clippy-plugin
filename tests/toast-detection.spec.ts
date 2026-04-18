@@ -202,4 +202,52 @@ describe("toast detection", () => {
 
     assert.deepEqual(candidates.map((candidate) => candidate.element.id), []);
   });
+
+  it("ignores clipped accessibility live regions that are not visible toasts", () => {
+    const dom = new JSDOM(
+      `
+        <div
+          id="sr-only-status"
+          role="status"
+          aria-live="assertive"
+          style="position: fixed; top: 0px; left: 0px; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); clip-path: inset(100%); white-space: nowrap;"
+        >
+          Drag started
+        </div>
+      `
+    );
+    const document = dom.window.document;
+    const candidates = collectToastCandidates(document);
+
+    assert.deepEqual(candidates.map((candidate) => candidate.element.id), []);
+  });
+
+  it("detects host toasts rendered as live-region list items", () => {
+    const dom = new JSDOM(
+      `
+        <aside aria-live="polite" aria-atomic="false" class="pointer-events-none fixed bottom-3 left-3 z-[120] w-full max-w-sm px-1">
+          <ol class="flex w-full flex-col-reverse gap-2">
+            <li id="host-toast" class="pointer-events-auto rounded-sm border shadow-lg backdrop-blur-xl transition-[transform,opacity] duration-200 ease-out translate-y-0 opacity-100 border-sky-300 bg-sky-50 text-sky-900">
+              <div class="flex items-start gap-3 px-3 py-2.5">
+                <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-sky-500"></span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-semibold leading-5">Clippy test toast</p>
+                  <p class="mt-1 text-xs leading-4 opacity-70">If interception is enabled, Clippy should hijack this notification.</p>
+                </div>
+                <button type="button" aria-label="Dismiss notification">Dismiss</button>
+              </div>
+            </li>
+          </ol>
+        </aside>
+      `
+    );
+    const document = dom.window.document;
+    const candidates = collectToastCandidates(document);
+
+    assert.deepEqual(
+      candidates.map((candidate) => candidate.element.id),
+      ["host-toast"]
+    );
+    assert.ok(candidates[0].score >= 3, "host toast should score as a strong candidate");
+  });
 });

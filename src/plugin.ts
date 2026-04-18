@@ -1,8 +1,6 @@
 import { definePlugin } from '@paperclipai/plugin-sdk';
+import { SETTINGS_ACTION_KEY, SETTINGS_DATA_KEY } from './plugin-keys.ts';
 import { DEFAULT_CLIPPY_SETTINGS, normalizeClippySettings } from './settings.ts';
-
-export const SETTINGS_DATA_KEY = 'paperclip-clippy-plugin.settings.get';
-export const SETTINGS_ACTION_KEY = 'paperclip-clippy-plugin.settings.save';
 
 const SETTINGS_SCOPE = {
   scopeKind: 'instance' as const,

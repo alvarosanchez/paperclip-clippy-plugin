@@ -7,7 +7,7 @@ export interface ClippySettings {
 }
 
 export const DEFAULT_CLIPPY_SETTINGS: ClippySettings = {
-  enabled: false,
+  enabled: true,
   interceptionMode: 'aggressive',
   showDebugPanel: false
 };
@@ -18,14 +18,8 @@ export function normalizeClippySettings(input: unknown): ClippySettings {
       ? (input as Record<string, unknown>)
       : {};
   const interceptionMode =
-    record.interceptionMode === 'invasive'
-      || record.interceptionMode === 'aggressive'
-      ? record.interceptionMode
-      : DEFAULT_CLIPPY_SETTINGS.interceptionMode;
-  const enabled =
-    typeof record.enabled === 'boolean'
-      ? record.enabled
-      : DEFAULT_CLIPPY_SETTINGS.enabled;
+    DEFAULT_CLIPPY_SETTINGS.interceptionMode;
+  const enabled = DEFAULT_CLIPPY_SETTINGS.enabled;
   const showDebugPanel =
     typeof record.showDebugPanel === 'boolean'
       ? record.showDebugPanel

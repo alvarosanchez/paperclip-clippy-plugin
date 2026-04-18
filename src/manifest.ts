@@ -18,7 +18,6 @@ const manifest: PaperclipPluginManifestV1 = {
   categories: ['ui'],
   capabilities: [
     'ui.action.register',
-    'ui.page.register',
     'plugin.state.read',
     'plugin.state.write'
   ],
@@ -33,12 +32,6 @@ const manifest: PaperclipPluginManifestV1 = {
         id: 'paperclip-clippy-plugin-global-toolbar-button',
         displayName: 'Clippy',
         exportName: 'ClippyGlobalToolbarButton'
-      },
-      {
-        type: 'settingsPage',
-        id: 'paperclip-clippy-plugin-settings-page',
-        displayName: 'Clippy',
-        exportName: 'ClippySettingsPage'
       }
     ]
   }

@@ -65,4 +65,30 @@ describe("toast extraction", () => {
     assert.equal(content.title, "Build failed");
     assert.equal(content.body, "Check the logs for details.");
   });
+
+  it("extracts title and body from host toast paragraph pairs", () => {
+    const dom = new JSDOM(
+      `
+        <li class="host-toast">
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold leading-5">Clippy test toast</p>
+            <p class="mt-1 text-xs leading-4 opacity-70">If interception is enabled, Clippy should hijack this notification.</p>
+          </div>
+          <button type="button" aria-label="Dismiss notification">Dismiss</button>
+        </li>
+      `
+    );
+    const document = dom.window.document;
+    const element = document.querySelector(".host-toast");
+
+    assert.ok(element);
+    const content = extractToastContent(element);
+
+    assert.equal(content.title, "Clippy test toast");
+    assert.equal(
+      content.body,
+      "If interception is enabled, Clippy should hijack this notification."
+    );
+    assert.equal(content.source, "structured");
+  });
 });

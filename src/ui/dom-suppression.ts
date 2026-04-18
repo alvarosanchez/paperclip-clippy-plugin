@@ -40,6 +40,9 @@ export function suppressToastNode(
     token = existingToken;
   }
   const alreadyHandled = element.hasAttribute(HANDLED_TOAST_ATTR);
+  if (alreadyHandled && !alreadySuppressed) {
+    return { element, token, alreadyHandled: true };
+  }
 
   if (!(alreadySuppressed && existingToken && existingToken === token)) {
     persistOriginalState(element);
@@ -79,6 +82,28 @@ export function clearToastSuppression(element: Element): void {
   element.removeAttribute(SUPPRESSED_TOAST_TOKEN_ATTR);
   element.removeAttribute(SUPPRESSED_TOAST_AT_ATTR);
   restoreOriginalState(element);
+}
+
+export function clearSuppressedToastNodes(root: ParentNode): number {
+  const nodes = new Set<Element>();
+  if (isElementNode(root) && root.getAttribute(SUPPRESSED_TOAST_ATTR) === "true") {
+    nodes.add(root);
+  }
+  if ("querySelectorAll" in root) {
+    for (const element of Array.from(
+      root.querySelectorAll(`[${SUPPRESSED_TOAST_ATTR}="true"]`)
+    )) {
+      nodes.add(element);
+    }
+  }
+  for (const element of nodes) {
+    clearToastSuppression(element);
+  }
+  return nodes.size;
+}
+
+function isElementNode(node: ParentNode): node is Element {
+  return "nodeType" in node && node.nodeType === 1;
 }
 
 export function createSuppressionToken(now: () => number = Date.now): string {

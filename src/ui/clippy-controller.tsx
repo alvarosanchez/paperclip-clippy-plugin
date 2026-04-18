@@ -1,13 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { usePluginData } from "@paperclipai/plugin-sdk/ui";
-
-import { SETTINGS_DATA_KEY } from "../plugin.ts";
-import {
-  DEFAULT_CLIPPY_SETTINGS,
-  normalizeClippySettings,
-  type ClippySettings
-} from "../settings.ts";
-import { suppressToastNode } from "./dom-suppression.ts";
+import { useEffect, useRef } from "react";
+import { clearSuppressedToastNodes, suppressToastNode } from "./dom-suppression.ts";
 import {
   collectToastCandidates,
   type ToastCandidate
@@ -17,7 +9,7 @@ import {
   type ToastContent
 } from "./toast-extractor.ts";
 import { ToastQueue, type ToastQueueEntry } from "./toast-queue.ts";
-import { ClippyOverlay, type ClippyDebugMatch } from "./clippy-overlay.tsx";
+import { renderClippyOverlayInto, type ClippyDebugMatch } from "./clippy-overlay.tsx";
 import { ensureClippyOverlayStyles } from "./styles.ts";
 
 type ClippyToastPayload = {
@@ -30,47 +22,88 @@ const DISPLAY_DURATION_MS = 5000;
 const MAX_DEBUG_MATCHES = 5;
 
 export function ClippyController() {
-  const { data } = usePluginData<ClippySettings>(SETTINGS_DATA_KEY);
-  const settings = useMemo(
-    () => normalizeClippySettings(data ?? DEFAULT_CLIPPY_SETTINGS),
-    [data]
-  );
+  const settings = {
+    enabled: true,
+    interceptionMode: "aggressive" as const,
+    showDebugPanel: false
+  };
 
   const queueRef = useRef(new ToastQueue<ClippyToastPayload>());
-  const [activeEntry, setActiveEntry] = useState<ToastQueueEntry<ClippyToastPayload> | null>(
-    null
-  );
-  const [pendingEntries, setPendingEntries] = useState<ToastQueueEntry<ClippyToastPayload>[]>(
-    []
-  );
-  const [debugMatches, setDebugMatches] = useState<ClippyDebugMatch[]>([]);
-  useEffect(() => {
-    if (typeof document === "undefined") {
-      return;
-    }
-    ensureClippyOverlayStyles(document);
-  }, []);
-
-  useEffect(() => {
-    if (settings.enabled) {
-      return;
-    }
-    queueRef.current.clear();
-    setActiveEntry(null);
-    setPendingEntries([]);
-    setDebugMatches([]);
-  }, [settings.enabled]);
+  const debugMatchesRef = useRef<ClippyDebugMatch[]>([]);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!settings.enabled || typeof document === "undefined") {
       return;
     }
+    ensureClippyOverlayStyles(document);
+  }, [settings.enabled]);
 
-    const minScore = settings.interceptionMode === "invasive" ? 0 : 1;
+  useEffect(() => {
+    if (settings.enabled) {
+      return;
+    }
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+    if (typeof document !== "undefined" && document.body) {
+      clearSuppressedToastNodes(document.body);
+    }
+    queueRef.current.clear();
+    debugMatchesRef.current = [];
+  }, [settings.enabled]);
 
-    const updateQueueState = () => {
-      setActiveEntry(queueRef.current.active);
-      setPendingEntries(queueRef.current.pending);
+  useEffect(() => {
+    if (!settings.enabled || typeof document === "undefined" || !document.body) {
+      return;
+    }
+
+    const minScore = 1;
+    const overlayContainer = document.createElement("div");
+    overlayContainer.setAttribute("data-clippy-overlay-host", "true");
+    document.body.appendChild(overlayContainer);
+
+    const renderOverlay = (activeEntry: ToastQueueEntry<ClippyToastPayload> | null) => {
+      overlayContainer.dataset.renderCount = String(
+        Number(overlayContainer.dataset.renderCount ?? "0") + 1
+      );
+      overlayContainer.dataset.activeTitle = activeEntry?.value.content.title ?? "";
+      overlayContainer.dataset.pendingCount = String(queueRef.current.pending.length);
+      renderClippyOverlayInto(overlayContainer, {
+        enabled: settings.enabled,
+        message: activeEntry?.value.content ?? null,
+        pendingCount: queueRef.current.pending.length,
+        onDismiss: handleDismiss,
+        debug: settings.showDebugPanel,
+        debugMatches: debugMatchesRef.current
+      });
+      overlayContainer.dataset.childCount = String(overlayContainer.childElementCount);
+    };
+
+    const syncOverlay = () => {
+      const activeEntry = queueRef.current.active;
+      renderOverlay(activeEntry);
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = null;
+      }
+      if (!activeEntry) {
+        return;
+      }
+      dismissTimerRef.current = setTimeout(() => {
+        overlayContainer.dataset.lastDequeueReason = "timer";
+        queueRef.current.dequeue();
+        overlayContainer.dataset.activeAfterDequeue = queueRef.current.active?.value.content.title ?? "";
+        syncOverlay();
+      }, DISPLAY_DURATION_MS);
+    };
+
+    const handleDismiss = () => {
+      overlayContainer.dataset.lastDequeueReason = "dismiss";
+      queueRef.current.dequeue();
+      overlayContainer.dataset.activeAfterDequeue = queueRef.current.active?.value.content.title ?? "";
+      syncOverlay();
     };
 
     const registerToast = (candidate: ToastCandidate) => {
@@ -87,20 +120,20 @@ export function ClippyController() {
         candidate,
         suppressedAt: Date.now()
       });
-      updateQueueState();
-      setDebugMatches((prev) => {
-        const next = [
-          {
-            id: entry.id,
-            title: content.title,
-            score: candidate.score,
-            reasons: candidate.reasons,
-            source: content.source
-          },
-          ...prev
-        ];
-        return next.slice(0, MAX_DEBUG_MATCHES);
-      });
+      overlayContainer.dataset.lastEnqueueTitle = content.title;
+      overlayContainer.dataset.queueSize = String(queueRef.current.size);
+      overlayContainer.dataset.activeAfterEnqueue = queueRef.current.active?.value.content.title ?? "";
+      debugMatchesRef.current = [
+        {
+          id: entry.id,
+          title: content.title,
+          score: candidate.score,
+          reasons: candidate.reasons,
+          source: content.source
+        },
+        ...debugMatchesRef.current
+      ].slice(0, MAX_DEBUG_MATCHES);
+      syncOverlay();
     };
 
     const scanRoot = (root: ParentNode) => {
@@ -136,44 +169,20 @@ export function ClippyController() {
       }
     });
 
-    if (document.body) {
-      scanRoot(document.body);
-      observer.observe(document.body, { childList: true, subtree: true });
-    }
+    scanRoot(document.body);
+    observer.observe(document.body, { childList: true, subtree: true });
+    syncOverlay();
 
     return () => {
       observer.disconnect();
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = null;
+      }
+      overlayContainer.replaceChildren();
+      overlayContainer.remove();
     };
-  }, [settings.enabled, settings.interceptionMode]);
+  }, [settings.enabled, settings.showDebugPanel]);
 
-  useEffect(() => {
-    if (!activeEntry) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      queueRef.current.dequeue();
-      setActiveEntry(queueRef.current.active);
-      setPendingEntries(queueRef.current.pending);
-    }, DISPLAY_DURATION_MS);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [activeEntry?.id]);
-
-  const handleDismiss = () => {
-    queueRef.current.dequeue();
-    setActiveEntry(queueRef.current.active);
-    setPendingEntries(queueRef.current.pending);
-  };
-
-  return (
-    <ClippyOverlay
-      enabled={settings.enabled}
-      message={activeEntry?.value.content ?? null}
-      pendingCount={pendingEntries.length}
-      onDismiss={handleDismiss}
-      debug={settings.showDebugPanel}
-      debugMatches={debugMatches}
-    />
-  );
+  return null;
 }

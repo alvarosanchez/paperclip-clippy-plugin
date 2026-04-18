@@ -25,6 +25,8 @@ const CANDIDATE_SELECTORS = [
   '[class*="notification" i]',
   '[class*="sonner" i]',
   '[class*="snackbar" i]',
+  "[aria-live] ol > li",
+  "[aria-live] ul > li",
   "[data-toast]",
   "[data-notification]",
   "[data-sonner]",
@@ -64,6 +66,11 @@ export function collectToastCandidateScore(element: Element): {
       score += hintScore;
       reasons.push(`hint:${hint}`);
     }
+  }
+
+  if (isLiveRegionToastListItem(element)) {
+    score += 3;
+    reasons.push("structure:live-region-list-item");
   }
 
   return { score, reasons };
@@ -186,6 +193,9 @@ function considerCandidate(
   candidates: Map<Element, ToastCandidate>,
   minScore: number
 ): void {
+  if (isClippedAccessibilityLiveRegion(element)) {
+    return;
+  }
   if (isHandledToast(element)) {
     return;
   }
@@ -208,6 +218,61 @@ function looksLikeToastContainer(element: Element, minScore: number): boolean {
     return true;
   }
   return collectToastCandidateScore(element).score >= minScore;
+}
+
+function isLiveRegionToastListItem(element: Element): boolean {
+  if (element.tagName !== "LI") {
+    return false;
+  }
+
+  const list = element.parentElement;
+  if (!list || (list.tagName !== "OL" && list.tagName !== "UL")) {
+    return false;
+  }
+
+  const liveRegion = list.closest("[aria-live]");
+  const ariaLive = liveRegion?.getAttribute("aria-live")?.toLowerCase();
+  if (!liveRegion || ariaLive === "off") {
+    return false;
+  }
+
+  const paragraphCount = element.querySelectorAll("p").length;
+  const hasDismissButton = Array.from(element.querySelectorAll("button,[role=\"button\"]")).some(
+    (button) => {
+      return collectHintSources(button).some((source) => {
+        return source.includes("dismiss") || source.includes("close");
+      });
+    }
+  );
+
+  return paragraphCount >= 2 || hasDismissButton;
+}
+
+function isClippedAccessibilityLiveRegion(element: Element): boolean {
+  const role = element.getAttribute("role")?.toLowerCase();
+  const ariaLive = element.getAttribute("aria-live")?.toLowerCase();
+  if (role !== "status" && role !== "alert" && !ariaLive) {
+    return false;
+  }
+
+  if (!("style" in element)) {
+    return false;
+  }
+
+  const style = (element as HTMLElement).style;
+  const clip = normalizeStyleValue(style.getPropertyValue("clip"));
+  const clipPath = normalizeStyleValue(style.getPropertyValue("clip-path"));
+  const width = normalizeStyleValue(style.getPropertyValue("width"));
+  const height = normalizeStyleValue(style.getPropertyValue("height"));
+  const overflow = normalizeStyleValue(style.getPropertyValue("overflow"));
+  const whiteSpace = normalizeStyleValue(style.getPropertyValue("white-space"));
+  const position = normalizeStyleValue(style.getPropertyValue("position"));
+
+  const isClipped = clip === "rect(0px, 0px, 0px, 0px)" || clipPath === "inset(100%)";
+  const isScreenReaderSized = width === "1px" && height === "1px" && overflow === "hidden";
+  const isScreenReaderPositioned = position === "fixed" || position === "absolute";
+
+  return isClipped && isScreenReaderSized && (isScreenReaderPositioned || whiteSpace === "nowrap");
 }
 
 function getComposedParent(element: Element): Element | null {
@@ -236,4 +301,8 @@ function isWeakFragment(element: Element, minScore: number): boolean {
     return true;
   }
   return sources.some((source) => FRAGMENT_HINTS.some((hint) => source.includes(hint)));
+}
+
+function normalizeStyleValue(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
