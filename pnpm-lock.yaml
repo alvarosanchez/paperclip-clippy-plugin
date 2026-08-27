@@ -22,8 +22,8 @@ importers:
         specifier: 28.0.1
         version: 28.0.1
       '@types/node':
-        specifier: 24.12.2
-        version: 24.12.2
+        specifier: 24.13.3
+        version: 24.13.3
       '@types/react':
         specifier: 19.2.14
         version: 19.2.14
@@ -436,8 +436,8 @@ packages:
   '@types/jsdom@28.0.1':
     resolution: {integrity: sha512-GJq2QE4TAZ5ajSoCasn5DOFm8u1mI3tIFvM5tIq3W5U/RTB6gsHwc6Yhpl91X9VSDOUVblgXmG+2+sSvFQrdlw==}
 
-  '@types/node@24.12.2':
-    resolution: {integrity: sha512-A1sre26ke7HDIuY/M23nd9gfB+nrmhtYyMINbjI1zHJxYteKR6qSMX56FsmjMcDb3SMcjJg5BiRRgOCC/yBD0g==}
+  '@types/node@24.13.3':
+    resolution: {integrity: sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q==}
 
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
@@ -581,8 +581,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  undici-types@7.16.0:
-    resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
+  undici-types@7.18.2:
+    resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
   undici-types@7.25.0:
     resolution: {integrity: sha512-AXNgS1Byr27fTI+2bsPEkV9CxkT8H6xNyRI68b3TatlZo3RkzlqQBLL+w7SmGPVpokjHbcuNVQUWE7FRTg+LRA==}
@@ -838,14 +838,14 @@ snapshots:
 
   '@types/jsdom@28.0.1':
     dependencies:
-      '@types/node': 24.12.2
+      '@types/node': 24.13.3
       '@types/tough-cookie': 4.0.5
       parse5: 7.3.0
       undici-types: 7.25.0
 
-  '@types/node@24.12.2':
+  '@types/node@24.13.3':
     dependencies:
-      undici-types: 7.16.0
+      undici-types: 7.18.2
 
   '@types/react-dom@19.2.3(@types/react@19.2.14)':
     dependencies:
@@ -1038,7 +1038,7 @@ snapshots:
 
   typescript@6.0.3: {}
 
-  undici-types@7.16.0: {}
+  undici-types@7.18.2: {}
 
   undici-types@7.25.0: {}
 
