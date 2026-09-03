@@ -57,8 +57,8 @@
   "devDependencies": {
     "@types/jsdom": "28.0.1",
     "@types/node": "24.12.2",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
     "esbuild": "0.28.0",
     "jsdom": "^29.0.0",
     "tsx": "4.21.0",
